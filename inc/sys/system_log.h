@@ -19,10 +19,10 @@
 #ifndef __SYSTEM_LOG_H__
 #define __SYSTEM_LOG_H__
 
+#include <stdio.h>
+#include <string.h>
 #include "system_stdlib.h"
 
-
-int printk( const char *, ... );
 
 enum {
     LOG_NOTHING,
@@ -38,11 +38,14 @@ enum {
     LOG_MAX
 };
 
+#ifndef FW_LOG_LEVEL
+#define FW_LOG_LEVEL    LOG_WARNING
+#endif
 extern const char *const log_level[LOG_MAX];
 
 #define FILE ( strrchr( __FILE__, '/' ) ? strrchr( __FILE__, '/' ) + 1 : __FILE__ )
 
 #define LOG( level, fmt, ... ) \
-    if ( ( level ) <= FW_LOG_LEVEL ) printk( "%s: %s(%d) %s: " fmt "\n", FILE, __func__, __LINE__, log_level[level], ##__VA_ARGS__ )
+    if ( ( level ) <= FW_LOG_LEVEL ) printf( "%s: %s(%d) %s: " fmt "\n", FILE, __func__, __LINE__, log_level[level], ##__VA_ARGS__ )
 
 #endif // __SYSTEM_LOG_H__

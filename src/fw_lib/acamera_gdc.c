@@ -58,8 +58,8 @@ int acamera_gdc_init( gdc_settings_t *gdc_settings )
     acamera_gdc_gdc_config_size_write( gdc_settings->base_gdc, gdc_settings->gdc_config.config_size );
 
     //set the gdc in and output resolution
-    acamera_gdc_gdc_datain_width_write( gdc_settings->base_gdc, gdc_settings->gdc_config.output_width );
-	acamera_gdc_gdc_datain_height_write( gdc_settings->base_gdc, gdc_settings->gdc_config.output_height );
+    acamera_gdc_gdc_datain_width_write( gdc_settings->base_gdc, gdc_settings->gdc_config.input_width );
+	acamera_gdc_gdc_datain_height_write( gdc_settings->base_gdc, gdc_settings->gdc_config.input_height );
     acamera_gdc_gdc_dataout_width_write( gdc_settings->base_gdc, gdc_settings->gdc_config.output_width );
     acamera_gdc_gdc_dataout_height_write( gdc_settings->base_gdc, gdc_settings->gdc_config.output_height );
 
@@ -126,7 +126,7 @@ int acamera_gdc_process( gdc_settings_t *gdc_settings, uint32_t num_input, uint3
 			index_plane=gdc_settings->gdc_config.toggle_planes_pos;
 		}*/
 
-		if(num_input<gdc_settings->gdc_config.total_planes){
+		if(num_input != gdc_settings->gdc_config.total_planes){
 			LOG(LOG_CRIT,"GDC number of input less than planes %d.\n",num_input);
 			return -1;
 		}
@@ -134,91 +134,49 @@ int acamera_gdc_process( gdc_settings_t *gdc_settings, uint32_t num_input, uint3
 		uint32_t lineoffset,height;
         //process input addresses
         if(num_input>=1){
-        	lineoffset = gdc_settings->gdc_config.output_width;
-        	height=gdc_settings->gdc_config.output_height;
+        	lineoffset = gdc_settings->gdc_config.input_width;
+        	height=gdc_settings->gdc_config.input_height;
+			acamera_gdc_gdc_data1in_addr_write( gdc_settings->base_gdc,input_addr[0]);
+			acamera_gdc_gdc_data1in_line_offset_write( gdc_settings->base_gdc, lineoffset );
+
         	if(gdc_settings->gdc_config.sequential_mode==1){
-        		acamera_gdc_gdc_data1in_addr_write( gdc_settings->base_gdc,input_addr[gdc_settings->seq_planes_pos]);
-        		if(gdc_settings->seq_planes_pos>0){ //UV planes
-        			lineoffset = gdc_settings->gdc_config.output_width >> gdc_settings->gdc_config.div_width;
-        			height = gdc_settings->gdc_config.output_height >> gdc_settings->gdc_config.div_height;
-        		}
+					lineoffset = gdc_settings->gdc_config.input_width >> gdc_settings->gdc_config.div_width;
+        			height = gdc_settings->gdc_config.input_height >> gdc_settings->gdc_config.div_height;
 
-        	}else{
-				acamera_gdc_gdc_data1in_addr_write( gdc_settings->base_gdc,input_addr[0]);
         	}
-        	acamera_gdc_gdc_data1in_line_offset_write( gdc_settings->base_gdc, lineoffset );
-        	frame_size+=height * lineoffset;
         }
-        if(num_input>=2 && gdc_settings->gdc_config.sequential_mode==0){ //only processed if not in toggle mode
-        	lineoffset = gdc_settings->gdc_config.output_width >> gdc_settings->gdc_config.div_width;
-        	height = gdc_settings->gdc_config.output_height >> gdc_settings->gdc_config.div_height;
-        	acamera_gdc_gdc_data2in_addr_write( gdc_settings->base_gdc, input_addr[1]);
-        	acamera_gdc_gdc_data2in_line_offset_write( gdc_settings->base_gdc,lineoffset );
-        	frame_size+=height * lineoffset;
+
+        if(num_input >=2) {
+            acamera_gdc_gdc_data2in_addr_write( gdc_settings->base_gdc,input_addr[1]);
+            acamera_gdc_gdc_data2in_line_offset_write( gdc_settings->base_gdc, lineoffset );
+		}		   
+        if(num_input >=3) { 
+            acamera_gdc_gdc_data3in_addr_write( gdc_settings->base_gdc,input_addr[2]);
+            acamera_gdc_gdc_data3in_line_offset_write( gdc_settings->base_gdc, lineoffset );
         }
-        if(num_input>=3 && gdc_settings->gdc_config.sequential_mode==0){ //only processed if not in toggle mode
-        	lineoffset = gdc_settings->gdc_config.output_width >> gdc_settings->gdc_config.div_width;
-        	height = gdc_settings->gdc_config.output_height >> gdc_settings->gdc_config.div_height;
-			acamera_gdc_gdc_data3in_addr_write( gdc_settings->base_gdc, input_addr[2]);
-			acamera_gdc_gdc_data3in_line_offset_write( gdc_settings->base_gdc, lineoffset );
-			frame_size+=height * lineoffset;
-		}
-
-        //sanity check for current output address of gdc
-        if ( ( gdc_settings->current_addr + frame_size) > ( gdc_settings->buffer_addr + gdc_settings->buffer_size ) || gdc_settings->current_addr < gdc_settings->buffer_addr ) {
-			gdc_settings->current_addr = gdc_settings->buffer_addr;
-		}
-
-        LOG( LOG_DEBUG, "GDC processing interrupt current_addr:0x%x total_planes:%d index_plane:%d",gdc_settings->current_addr,gdc_settings->gdc_config.total_planes,gdc_settings->seq_planes_pos );
 
         //outputs
         if(num_input>=1){
         	lineoffset = gdc_settings->gdc_config.output_width;
         	height=gdc_settings->gdc_config.output_height;
-
-        	if(gdc_settings->gdc_config.sequential_mode==1 && gdc_settings->seq_planes_pos>0){ //UV planes
+			acamera_gdc_gdc_data1out_addr_write( gdc_settings->base_gdc, gdc_settings->outbuffers[0]);
+        	acamera_gdc_gdc_data1out_line_offset_write( gdc_settings->base_gdc, lineoffset );
+        	
+        	if(gdc_settings->gdc_config.sequential_mode==1){ //UV planes
 				lineoffset = gdc_settings->gdc_config.output_width >> gdc_settings->gdc_config.div_width;
 				height = gdc_settings->gdc_config.output_height >> gdc_settings->gdc_config.div_height;
 			}
-
-
-        	if(( gdc_settings->current_addr + height * lineoffset) > ( gdc_settings->buffer_addr + gdc_settings->buffer_size ) ){
-        		LOG(LOG_CRIT,"Input memory not enough for input 1.\n");
-        		return -1;
-        	}
-        	acamera_gdc_gdc_data1out_addr_write( gdc_settings->base_gdc, gdc_settings->current_addr);
-        	acamera_gdc_gdc_data1out_line_offset_write( gdc_settings->base_gdc, lineoffset );
-        	gdc_settings->current_addr += height * lineoffset;
 		}
-
-        if(num_input>=2 && gdc_settings->gdc_config.sequential_mode==0){
-        	lineoffset = gdc_settings->gdc_config.output_width >> gdc_settings->gdc_config.div_width;
-        	height = gdc_settings->gdc_config.output_height >> gdc_settings->gdc_config.div_height;
-        	if(( gdc_settings->current_addr + height * lineoffset) > ( gdc_settings->buffer_addr + gdc_settings->buffer_size ) ){
-				LOG(LOG_CRIT,"Input memory not enough for input 2.\n");
-				return -1;
-			}
-			acamera_gdc_gdc_data2out_addr_write( gdc_settings->base_gdc, gdc_settings->current_addr);
-			acamera_gdc_gdc_data2out_line_offset_write( gdc_settings->base_gdc, lineoffset );
-			gdc_settings->current_addr += height * lineoffset;
-		}
-
-        if(num_input>=3 && gdc_settings->gdc_config.sequential_mode==0){
-        	lineoffset = gdc_settings->gdc_config.output_width >> gdc_settings->gdc_config.div_width;
-        	height = gdc_settings->gdc_config.output_height >> gdc_settings->gdc_config.div_height;
-        	if(( gdc_settings->current_addr +height * lineoffset) > ( gdc_settings->buffer_addr + gdc_settings->buffer_size ) ){
-				LOG(LOG_CRIT,"Input memory not enough for input 3.\n");
-				return -1;
-			}
-			acamera_gdc_gdc_data3out_addr_write( gdc_settings->base_gdc, gdc_settings->current_addr);
-			acamera_gdc_gdc_data3out_line_offset_write( gdc_settings->base_gdc, lineoffset );
-			gdc_settings->current_addr += height * lineoffset;
-		}
-
-        if(gdc_settings->gdc_config.sequential_mode==1){ //update the planes position
-			if(++(gdc_settings->seq_planes_pos)>=gdc_settings->gdc_config.total_planes)
-			   gdc_settings->seq_planes_pos=0;
-        }
+        if(num_input>=2){
+			acamera_gdc_gdc_data2out_addr_write( gdc_settings->base_gdc, gdc_settings->outbuffers[1]);
+        	acamera_gdc_gdc_data2out_line_offset_write( gdc_settings->base_gdc, lineoffset );        
+		} 
+        if(num_input>=3){
+			acamera_gdc_gdc_data3out_addr_write( gdc_settings->base_gdc, gdc_settings->outbuffers[2]);
+        	acamera_gdc_gdc_data3out_line_offset_write( gdc_settings->base_gdc, lineoffset );        
+		} 
+        
+        LOG( LOG_DEBUG, "acamera_gdc_start" );
 
         acamera_gdc_start(gdc_settings);
 

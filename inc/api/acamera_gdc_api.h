@@ -20,7 +20,7 @@
 #ifndef __ACAMERA_GDC_API_H__
 #define __ACAMERA_GDC_API_H__
 
-#include "system_stdlib.h"
+#include "sys/system_stdlib.h"
 
 #define ACAMERA_GDC_MAX_INPUT 3
 
@@ -28,6 +28,8 @@
 typedef struct gdc_config {
     uint32_t config_addr;   //gdc config address
     uint32_t config_size;   //gdc config size in 32bit
+    uint32_t input_width;  //gdc input width resolution
+    uint32_t input_height; //gdc input height resolution   
     uint32_t output_width;  //gdc output width resolution
     uint32_t output_height; //gdc output height resolution
     uint8_t  div_width;     //use in dividing UV dimensions; actually a shift right
@@ -48,6 +50,7 @@ typedef struct gdc_settings {
     int is_waiting_gdc;       //set when expecting an interrupt from gdc
 
     uint8_t seq_planes_pos; //sequential plance current index
+    uint32_t outbuffers[3];
 
     //when inititialised this callback will be called to update frame buffer addresses and offsets
     void ( *get_frame_buffer )(  uint32_t total_input, uint32_t * out_addr, uint32_t * out_lineoffset );

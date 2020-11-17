@@ -20,11 +20,22 @@
 #ifndef __SYSTEM_STDLIB_H__
 #define __SYSTEM_STDLIB_H__
 
-#include "acamera_driver_config.h"
+//#include "acamera_driver_config.h"
 
-#include <linux/types.h>
+//#include <linux/types.h>
+
+/*<linux/stddef.h> */
+#undef NULL
+#define NULL ((void *)0)
+
+typedef int int32_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+typedef unsigned char uint8_t;
+typedef unsigned long long u64;
+typedef u64 phys_addr_t;
+typedef phys_addr_t resource_size_t;
 //#include <asm/string.h>
-#include <linux/string.h>
 
 /**
  *
